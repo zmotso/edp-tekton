@@ -59,7 +59,7 @@ func (i *EDPInterceptor) Execute(r *http.Request) ([]byte, error) {
 		return nil, badRequest(fmt.Errorf("failed to parse body as InterceptorRequest: %w", err))
 	}
 
-	i.Logger.Infof("Interceptor request is: %s", body.Bytes())
+	i.LogRequest(body)
 
 	iresp := i.Process(ctx, &ireq)
 
@@ -128,4 +128,17 @@ func getRepoName(r *triggersv1.InterceptorRequest) (string, error) {
 	}
 
 	return strings.ToLower(gerritEventBody.Project.Name), nil
+}
+
+func (i *EDPInterceptor) LogRequest(body bytes.Buffer) {
+	buffer := &bytes.Buffer{}
+	if err := json.Compact(buffer, body.Bytes()); err != nil {
+		i.Logger.Errorf("Failed to compact body: %s", err)
+		return
+	}
+
+	htmlEscapeBuffer := &bytes.Buffer{}
+	json.HTMLEscape(htmlEscapeBuffer, buffer.Bytes())
+
+	i.Logger.Infof("Interceptor request is: %s", htmlEscapeBuffer.Bytes())
 }
